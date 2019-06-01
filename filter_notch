@@ -1,0 +1,28 @@
+f_vol=0.9,f_cut_c=3,f_res=0.2,f_lfo_spd=0.00003,
+(typeof f_prev_sample=='undefined')?f_prev_sample=0:0,
+f_cut=Math.sin(t*f_lfo_spd)*2+f_cut_c,
+f_curr_sample=Math.floor(t>>3)%128-64,
+f_curr_sample=(f_curr_sample>f_prev_sample)
+  // waveform up
+  ?((f_curr_sample-f_prev_sample>f_cut)?f_prev_sample+f_cut:f_curr_sample)
+  // waveform down
+  :((f_prev_sample-f_curr_sample>f_cut)?f_prev_sample-f_cut:f_curr_sample),
+// res not working yet
+//f_curr_sample=f_curr_sample-f_curr_sample*f_res,
+f_prev_sample=f_curr_sample,
+
+f2_cut_c=2,f2_res=0.2,
+(typeof f2_prev_sample=='undefined')?f2_prev_sample=0:0,
+f2_cut=Math.sin(t*f_lfo_spd)*32+f2_cut_c,
+mem=f2_curr_sample=(t>>3)%128-64,
+f2_curr_sample=(f2_curr_sample>f2_prev_sample)?
+  // waveform up
+  ((f2_curr_sample-f2_prev_sample>f2_cut)?f2_prev_sample+f2_cut:f2_curr_sample):
+  // waveform down
+  ((f2_prev_sample-f2_curr_sample>f2_cut)?f2_prev_sample-f2_cut:f2_curr_sample),
+// res not working yet
+//f2_curr_sample=f2_curr_sample-f2_curr_sample*f2_res,
+f2_curr_sample=(-mem+f2_curr_sample)/2,
+f2_prev_sample=f2_curr_sample,
+(f_curr_sample+f2_curr_sample)/2*f_vol+128
+

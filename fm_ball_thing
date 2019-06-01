@@ -1,0 +1,40 @@
+vol = 0.5,
+tempo = 1948,
+sample_rate = 44100,
+
+// FM Bass
+
+(typeof ram == 'undefined') ? ram = [0,0,0,0,0,0] : 0,
+
+sine_wave = function(frequency) {
+	duty_length = sample_rate / frequency;
+	return Math.sin(t / duty_length * (2 * Math.PI)) * 127;
+},
+
+decay_exponential = function(start, length, curve) {   
+	if (start + length < t) return 0;
+	e_pos = ((t - start)) / length;
+	return (1 / (e_pos + 1 / curve)) / curve;
+},
+
+// check for new trigger
+(t % (tempo * 4) == 0) ? ram[0] = t : 0,
+(t % (tempo * 5) == 0) ? ram[0] = t : 0,
+(t % (tempo * 13) == 0) ? ram[0] = t : 0,
+
+// bytebeat melody
+(ram[0] == t) ? p = 110 * ((t / tempo) & 81 >> 2) * 1.059463 : 0,
+
+// run sample against decay envelope
+fm1 = function(p) {
+	s = sine_wave(p * 2) * decay_exponential(ram[0], 41800, 18) * 0.1;
+	s *= sine_wave(p) * decay_exponential(ram[0], 41800, 28) * 0.1;
+	s *= sine_wave(p / 2) * decay_exponential(ram[0], 41800, 20) * 0.01;
+	return s * vol;
+},
+
+s = fm1(p) + ((p > 440) ? fm1(p * 1.5) : 0),
+//s = fm1(p),
+
+// output
+s * vol + 127

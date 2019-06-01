@@ -1,0 +1,35 @@
+// filter
+f_vol=0.16,f_cut_c=14,f_res=0.02,f_lfo_spd=0.00003,
+(typeof f_prev_sample=='undefined')?f_prev_sample=0:0,
+(typeof bass_prev=='undefined')?bass_prev=0:0,
+f_cut=Math.abs(Math.sin(t*f_lfo_spd)*4+f_cut_c),
+filter=function(curr,prev){
+	return (curr>prev)
+	// waveform up
+	?((curr-prev>f_cut)?prev+f_cut:curr)
+	// waveform down
+	:((prev-curr>f_cut)?prev-f_cut:curr)
+},
+
+// delay
+d_feedback=0.3,d_mix=0.5,d_length=14700,
+(typeof d_mem=='undefined')?d_mem=Array.apply(null, {length: d_length}).map(Function.call,()=>{return 0}):0,
+(typeof d_count=='undefined')?d_count=0:0,
+
+f_curr_sample=(t)*Math.pow(1.059,((t>>14)&(((t>>15)/3)&30)|((t>>18)&3)&(t>>12)|(((t>>12)*3)&42)&9))%255
++(t/2)*Math.pow(1.059,((t>>14)&(((t>>15)/3)&30)|((t>>18)&5)|(((t>>12)*3)&42)&9))%255,
+
+f_curr_sample=filter(f_curr_sample,f_prev_sample),
+// res not working yet
+f_curr_sample=f_curr_sample-f_curr_sample*f_res,
+f_prev_sample=f_curr_sample,
+
+d_count++,
+(d_count>=d_length)?d_count=0:0,
+d_out=d_mem[d_count]*d_mix,
+d_mem[d_count]=f_curr_sample+d_mem[d_count]*d_feedback,
+bass_curr=(t/4)*Math.pow(1.059,((t>>14)&(((t>>15)/3)&30)|((t>>18)%3)|(((t>>12)*3)&42)&7))%255,
+bass_curr=filter(bass_curr,bass_prev),
+bass_prev=bass_curr,
+f_curr_sample+=bass_curr,
+(f_curr_sample+d_out)*f_vol

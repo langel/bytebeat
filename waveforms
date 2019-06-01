@@ -1,0 +1,52 @@
+vol = 0.5,
+tempo = 2048,
+sample_rate = 44100,
+
+// WAVEFORMS
+// frequency accuracy
+// pulse duty should be 0..1
+
+noise_wave = function() {
+	return (Math.random() - 0.5) * 255;
+},
+
+pulse_wave = function(frequency, duty) {
+	duty_length = sample_rate / frequency;
+	return ((t % duty_length > duty_length * duty) - 0.5) * 255;
+},
+
+saw_wave = function(frequency) {
+	duty_length = sample_rate / frequency;
+	return ((t % duty_length) / duty_length - 0.5) * 255;
+},
+
+sine_wave = function(frequency) {
+	duty_length = sample_rate / frequency;
+	return Math.sin(t / duty_length * (2 * Math.PI)) * 127;
+},
+
+square_wave = function(frequency) {
+	duty_length = sample_rate / frequency;
+	return ((t % duty_length > duty_length / 2) - 0.5) * 255;
+},
+
+triangle_wave = function(frequency) {
+	duty_length = sample_rate / frequency;
+	pos = (t % duty_length) / duty_length;
+	return (((pos <= 0.5) ? pos * 2 : (1 - pos) * 2) - 0.5) * 255;
+},
+	
+// LFO that A440 slightly
+a = 440 + Math.sin(t / sample_rate) * 0.1,
+
+type = ((t >> 14) % 5),
+
+s = 0,
+
+s = (type == 0) ? pulse_wave(a, (Math.sin(t / 25000) + 1) / 2) : s,
+s = (type == 1) ? sine_wave(a) : s,
+s = (type == 2) ? saw_wave(a) : s,
+s = (type == 3) ? square_wave(a) : s,
+s = (type == 4) ? triangle_wave(a) : s,
+
+s * vol + 127

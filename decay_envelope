@@ -1,0 +1,32 @@
+vol = 0.5,
+
+// ENVELOPES
+
+(typeof ram == 'undefined') ? ram = [0,0,0,0,0,0] : 0,
+
+// envelope length & also pretty much the tempo
+el = 4024,
+
+// returns value between 0 and 1
+decay_linear = function(trigger_start, length) {
+	if (trigger_start + length < t) return 0;
+	return (length - (t - trigger_start)) / length
+},
+
+decay_exponential = function(start, length, curve) {   
+	if (start + length < t) return 0;
+	e_pos = ((t - start)) / length;
+	return (1 / (e_pos + 1 / curve)) / curve;
+},
+
+// bytebeat melody
+s = (t * ((t / el) & 11 + (t / (el * 8)) & 7)) % 255 - 127,
+
+// check for new trigger
+(t % (el * 2) == 0) ? ram[0] = t : 0,
+
+// run sample against decay envelope
+s = (ram[0] + el > t) ? s * decay_exponential(ram[0], el, 2) : 0,
+
+// output
+s * vol + 127

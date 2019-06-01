@@ -1,0 +1,40 @@
+svol = 0.8,
+tempo = 2048,
+el = 20000,
+
+(typeof ram == 'undefined') ? ram = [0,0,0,0,0,0] : 0, 
+
+decay_exponential = function(start, length, curve) {   
+	if (start + length < t) return 0;
+	e_pos = ((t - start)) / length;
+	return (1 / (e_pos + 1 / curve)) / curve;
+},
+
+hipass = function(s, cut, addr) {
+	s_n = lopass(s, cut, addr);
+	s = -(- s + s_n) / 2;
+	ram[addr] = s;
+	return s;
+},
+
+lopass = function(s, cut, addr) {
+	s_p = ram[addr];
+	s = (s > s_p) ?
+	// waveform up
+	((s - s_p > cut) ? s_p + cut : s) :
+	// waveform down
+	((s_p - s > cut) ? s_p - cut : s);
+	ram[addr] = s;
+	return s;
+},
+
+// hihat waveform
+s = hipass((Math.random() * 255 - 127), 60, 0),
+
+// trigger hihat
+(t % (tempo * 8) == 0) ? ram[1] = t : 0,
+
+// apply decay envelope
+s *= decay(ram[1], el),
+
+s * vol + 127

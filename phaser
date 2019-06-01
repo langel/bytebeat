@@ -1,0 +1,59 @@
+lfo_speed = 0.00007,
+ vol = 0.25,
+
+ (typeof filter_past == 'undefined') ? filter_past = [0,0,0,0] : 0,
+
+ hipass = function(s, filter) {
+	 s_n = lopass(s, filter);
+	 s = -(- s + s_n) / 2;
+	 filter_past[filter] = s;
+	 return s;
+ },
+
+ lopass = function(s, filter) {
+	 f = fb[filter];
+	 cut = Math.sin(t * f.ls) * f.ld + f.c;
+	 s_p = filter_past[filter];
+	 s = (s > s_p) ?
+		 // waveform up
+		 ((s - s_p > cut) ? s_p + cut : s) :
+		 // waveform down
+		 ((s_p - s > cut) ? s_p - cut : s);
+	 filter_past[filter] = s;
+	 return s;
+ },
+
+ // filter bank
+ fb = [
+	 // 0 phaser_hi_1
+	{ c: 55, ld: 30, ls: lfo_speed },
+	// 1 phaser_hi_2
+	{ c: 26, ld: 12, ls: lfo_speed },
+	// 2 phaser_lo_1
+	{ c: 5, ld: 4, ls: lfo_speed },
+	// 3 phaser_lo_2
+	{ c: 12, ld: 11, ls: lfo_speed },
+],
+
+
+
+ // square
+ samp = 
+ ((t/1 % 255) >> 7) * 255 - 127 +
+ ((t/2 % 255) >> 7) * 255 - 127 +
+ ((t/3 % 255) >> 7) * 255 - 127,
+ samp/=3,
+
+ // saw
+ samp = 
+ t/1 % 255 - 127 +
+ t/2 % 255 - 127 +
+ t/3 % 255 - 127,
+ samp/=3,
+
+(
+ hipass(samp, 0)
+ + lopass(samp, 2) 
+ + hipass(samp, 1) 
+ + lopass(samp, 3) 
+) * vol + 127

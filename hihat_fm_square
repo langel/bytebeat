@@ -1,0 +1,37 @@
+vol = 0.8,
+tempo = 2048,
+el = 5000,
+sample_rate = 44100,
+
+decay = function(trigger_start, length) {
+	if (trigger_start + length < t) return 0;
+	// exponential decay
+	e_pos = ((t - trigger_start)) / length;
+	curve = (1 / (e_pos + 0.5) - 2 / 3) * 0.75;
+	return curve;
+},
+
+square_wave = function(frequency, sample_rate) {
+	duty_length = sample_rate / frequency;
+	duty_on = (t % duty_length > duty_length / 2) ? 0 : 1;
+	return duty_on;
+},
+
+// hihat waveform
+s = Math.random() * 255 - 127,
+// carrier frequency
+cf = 1799,
+// modulator frequency
+mf = 3293,
+// modulator 2
+m2f = 8659,
+
+s = square_wave(cf, sample_rate) * square_wave(mf, sample_rate) * square_wave(m2f, sample_rate) * 255 - 127,
+
+// trigger hihat
+(t % (tempo * 8) == 0) ? ram[1] = t : 0,
+
+// apply decay envelope
+s *= decay(ram[1], el),
+
+s * vol + 127

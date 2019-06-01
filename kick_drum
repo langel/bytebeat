@@ -1,0 +1,32 @@
+vol = 0.8,
+sample_rate = 44040,
+tempo = 2048,
+el = 5000,
+
+(typeof ram == 'undefined') ? ram = [0,0,0,0,0,0] : 0, 
+
+// KICK
+
+decay_exponential = function(start, length, curve) {   
+	if (start + length < t) return 0;
+	e_pos = ((t - start)) / length;
+	return (1 / (e_pos + 1 / curve)) / curve;
+},
+
+triangle_wave = function(frequency) {
+	duty_length = sample_rate / frequency;
+	pos = (t % duty_length) / duty_length;
+	return (((pos <= 0.5) ? pos * 2 : (1 - pos) * 2) - 0.5) * 255;
+},
+
+// trigger kick
+(t % (tempo * 8) == 0) ? ram[0] = t : 0,
+
+// kick waveform
+s = triangle_wave(50),
+s = triangle_wave(50 + decay_exponential(ram[0], el, 800) / 1000),
+
+// envelope
+s *= decay_exponential(ram[0], el, 10),
+
+s * vol + 127

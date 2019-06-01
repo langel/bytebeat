@@ -1,0 +1,46 @@
+vol = 0.8,
+sample_rate = 44040,
+tempo = 2048,
+el = 5000,
+
+(typeof ram == 'undefined') ? ram = [0,0,0,0,0,0] : 0, 
+
+// SNARE
+
+decay_exponential = function(start, length, curve) {   
+	if (start + length < t) return 0;
+	e_pos = ((t - start)) / length;
+	return (1 / (e_pos + 1 / curve)) / curve;
+},
+
+lopass = function(s, cut, addr) {
+	s_p = ram[addr];
+	s = (s > s_p) ?
+		// waveform up
+		((s - s_p > cut) ? s_p + cut : s) :
+		// waveform down
+		((s_p - s > cut) ? s_p - cut : s);
+	ram[addr] = s;
+	return s;
+},
+
+noise_wave = function() {
+	return (Math.random() - 0.5) * 255;
+},
+
+triangle_wave = function(frequency) {
+	duty_length = sample_rate / frequency;
+	pos = (t % duty_length) / duty_length;
+	return (((pos <= 0.5) ? pos * 2 : (1 - pos) * 2) - 0.5) * 255;
+},
+
+// trigger snare
+(t % (tempo * 8) == 0) ? ram[0] = t : 0,
+
+// kick waveform
+s = lopass((triangle_wave(150) + noise_wave()), 33, 2),
+
+// envelope
+s *= decay_exponential(ram[0], el, 20),
+
+s * vol + 127

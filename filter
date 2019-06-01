@@ -1,0 +1,21 @@
+// FILTERS
+
+(typeof ram == 'undefined') ? ram = [0,0,0,0,0,0] : 0, 
+
+hipass = function(s, cut, addr) {
+	s_n = lopass(s, cut);
+	s = -(- s + s_n) / 2;
+	ram[addr] = s;
+	return s;
+},
+
+lopass = function(s, cut, addr) {
+	s_p = ram[addr];
+	s = (s > s_p) ?
+		// waveform up
+		((s - s_p > cut) ? s_p + cut : s) :
+		// waveform down
+		((s_p - s > cut) ? s_p - cut : s);
+	ram[addr] = s;
+	return s;
+},
