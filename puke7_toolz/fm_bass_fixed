@@ -1,0 +1,51 @@
+vol = 50,
+tempo = 6480,
+sample_rate = 44100,
+
+// FM Bass
+
+(typeof ram == 'undefined') ? ram = [0,0,0,0,0,0] : 0,
+
+note_hertz = function(steps_from_a) {
+	return 420 * Math.pow(1.059463, steps_from_a);
+},
+
+decay_exponential = function(start, length, curve) {   
+	if (start + length < t) return 0;
+	e_pos = ((t - start)) / length;
+	return (1 / (e_pos + 1 / curve)) / curve;
+},
+
+fm = function(freq, mod) {
+	// car_frequency is in hertz
+	// mod_sine is -1 .. 1
+	duty_length = sample_rate / freq;
+	return Math.sin(Math.PI * (t / duty_length + mod));
+},
+
+
+
+// check for new trigger
+(t % (tempo * 4) == 0) ? ram[0] = t : 0,
+(t % (tempo * 5) == 0) ? ram[0] = t : 0,
+(t % (tempo * 13) == 0) ? ram[0] = t : 0,
+
+// bytebeat melody
+(ram[0] == t) ? p = note_hertz(-30 + ((t / tempo) & 27) + ((t >> 16) % 4) * 3) : 0,
+
+
+// run sample against decay envelope
+fm1 = function(p) {
+	s = fm(p * 7, 0) * decay_exponential(ram[0], sample_rate, 10);
+	s = fm(p * 3, s) * decay_exponential(ram[0], sample_rate, 100);
+	s = fm(p * 1, s) * decay_exponential(ram[0], sample_rate, 10);
+	//s = sine_wave(fm(p * 4, s, 0.1)) * decay_exponential(ram[0], 800, 20);
+	//s = sine_wave(fm(p / 2, s, 0.1)) * decay_exponential(ram[0], 81800, 2);
+	//s = sine_wave(fm(p / 8, s, 1)) * decay_exponential(ram[0], 51800, 100);
+	return s;
+},
+
+s = fm1(p),
+
+// output
+s * vol + 127

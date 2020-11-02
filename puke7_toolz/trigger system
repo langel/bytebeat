@@ -1,0 +1,109 @@
+
+vol = 100,
+sample_rate = 44040,
+bpm = 135,
+el = 5000,
+
+(typeof ram == 'undefined') ? ram = [0,0,0,0,0,0] : 0, 
+
+
+decay_exponential = function(start, length, curve) {   
+	if (start + length < t) return 0;
+	e_pos = ((t - start)) / length;
+	return (1 / (e_pos + 1 / curve)) / curve;
+},
+
+lopass = function(s, cut, addr) {
+	s_p = ram[addr];
+	s = (s > s_p) ?
+		// waveform up
+		((s - s_p > cut) ? s_p + cut : s) :
+		// waveform down
+		((s_p - s > cut) ? s_p - cut : s);
+	ram[addr] = s;
+	return s;
+},
+
+hipass = function(s, cut, addr) {
+	s_n = lopass(s, cut, addr);
+	s = -(- s + s_n) / 2;
+	ram[addr] = s;
+	return s;
+},
+
+noise_wave = function() {
+	return (Math.random() - 0.5);
+},
+
+triangle_wave = function(frequency) {
+	duty_length = sample_rate / frequency;
+	pos = (t % duty_length) / duty_length;
+	return (((pos <= 0.5) ? pos * 2 : (1 - pos) * 2) - 0.5);
+},
+
+
+patterns = {
+	snare: [
+//		[ div, offset, volume, probability ]
+		[8, 16, 0.3, 0.2],
+		[6, 8, 0.5, 0.5],
+		[1, 2, 1, 1],
+	],
+	kick: [
+		[8, 0, 0.25, 0.25],
+		[6, 0, 0.5, 0.5],
+		[1, 0, 1, 1],
+	],
+	hat: [
+		[8, 0, 0.2, 0.2],
+		[2, 4, 1, 0.9],
+	],
+},
+//
+
+// TRIGGER ENGINE
+trigger_find = function(pattern_set, trig_addr, vol_addr) {
+	measure_length = ((sample_rate * 60) / bpm) * 4;
+	pattern_set.forEach(function(pat) {
+		if (Math.random() <= 1 - pat[2]) return;
+		div = measure_length / pat[0];
+		if (pat[1] !== 0) {
+			offset = measure_length / pat[1];
+			next_trigger = (Math.floor(t / div) * div) + offset;
+		} else next_trigger = div;
+		if (t % Math.round(next_trigger) == 0) { 
+			ram[trig_addr] = t;
+			ram[vol_addr] = pat[3];
+		}
+	});
+},
+// RAM usage
+// snare 0:trig, 1:filt, 3:vol
+// kick  2:trig, 4:vol
+// hat   5:trig, 6:vol, 7:filt
+trigger_find(patterns.snare, 0, 3),
+trigger_find(patterns.kick, 2, 4),
+trigger_find(patterns.hat, 5, 6),
+
+// SNARE
+// waveform
+s = triangle_wave(150) + lopass(noise_wave(), 0.09, 1) * 0.5,
+// envelope
+s *= decay_exponential(ram[0], el, 7) * ram[3],
+
+// KICK
+// waveform
+k = triangle_wave(72),
+k += triangle_wave(50 + decay_exponential(ram[2], el, 800) / 1000),
+// envelope
+k *= decay_exponential(ram[2], el, 7) * ram[4],
+
+// HIHAT
+// hihat waveform
+h = hipass((Math.random() - 0.5) * 255, 120, 7) / 8,
+// apply decay envelope
+h *= decay_exponential(ram[5], el, 30),
+
+
+output = (s + k + h) * vol + 127,
+output = Math.min(Math.max(0, output), 255)

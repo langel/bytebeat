@@ -1,0 +1,57 @@
+vol = 50,
+a_tuna = 420,
+sample_rate = 44100,
+bpm = 75,
+beat = Math.floor(sample_rate * 60 / bpm / 4),
+
+octave_steps = 1 + (((t / beat) >> 4) % 19),
+chord_steps = octave_steps / 4,
+freq_step = Math.pow(2, 1/octave_steps),
+
+minor = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0],
+
+key = (Math.floor(t / (beat * 16)) * Math.floor(octave_steps * 0.6)) % octave_steps,
+root = key + Math.floor(t / (beat * 4)) * 3 % octave_steps,
+
+(typeof ram == 'undefined') ? ram = [0,0,0,0,0,0] : 'haha wut',
+
+freq_calc = function(note_id) {
+	note_id -= octave_steps * 2;
+	note_quant = note_id + (minor[(note_id + key) % 12]) ? 0 : 1;
+	note_freq = a_tuna * Math.pow(freq_step, note_id);
+	return note_freq + Math.sin(t / beat) * 0.0005;
+},
+
+
+square_wave = function(frequency) {
+	duty_length = sample_rate / frequency;
+	return ((t % duty_length > duty_length / 2) - 0.5);
+},
+
+decay_exponential = function(start, length, curve) {   
+	if (start + length < t) return 0;
+	e_pos = ((t - start)) / length;
+	return (1 / (e_pos + 1 / curve)) / curve;
+},
+
+beat_check = function(beat, current_value) {
+	if (t % beat == 0) return t;
+	else return current_value;
+},
+
+s = 0,
+
+beat_1 = 4,
+ram[0] = beat_check(beat * beat_1, ram[0]),
+s += square_wave(freq_calc(root)) * decay_exponential(ram[0], beat * beat_1, 5),
+beat_2 = 7,
+ram[1] = beat_check(beat * beat_2, ram[1]),
+s += square_wave(freq_calc(root + Math.round(chord_steps))) * decay_exponential(ram[1], beat * beat_2, 8),
+beat_3 = 11,
+ram[2] = beat_check(beat * beat_3, ram[2]),
+s += square_wave(freq_calc(root + Math.round(chord_steps * 2))) * decay_exponential(ram[2], beat * beat_3, 15),
+beat_4 = 17,
+ram[3] = beat_check(beat * beat_4, ram[3]),
+s += square_wave(freq_calc(root + Math.round(chord_steps * 3))) * decay_exponential(ram[3], beat * beat_4, 22),
+
+s * vol + 127

@@ -1,4 +1,4 @@
-vol = 0.8,
+vol = 100,
 sample_rate = 44040,
 tempo = 2048,
 el = 5000,
@@ -31,13 +31,13 @@ noise_wave = function() {
 triangle_wave = function(frequency) {
 	duty_length = sample_rate / frequency;
 	pos = (t % duty_length) / duty_length;
-	return (((pos <= 0.5) ? pos * 2 : (1 - pos) * 2) - 0.5) * 255;
+	return (((pos <= 0.5) ? pos * 2 : (1 - pos) * 2) - 0.5);
 },
 
 // trigger snare
 (t % (tempo * 8) == 0) ? ram[0] = t : 0,
 
-// kick waveform
+// snare waveform
 s = lopass((triangle_wave(150) + noise_wave()), 33, 2),
 
 // envelope
