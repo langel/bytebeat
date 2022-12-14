@@ -1,0 +1,141 @@
+sample_rate = 44100,
+bpm = 360,
+tempo = 60 / bpm * sample_rate,
+beat = Math.floor(t / tempo),
+vol = 90,
+s = 0,
+
+/* system ram
+	0 section change counter
+	4 kick trigger pos in time
+	5 snar trigger pos in time
+	6 snar filter ram
+	7 little snare time
+	8 hats
+	9 hats vol
+*/
+(typeof ram == 'undefined' || t == 0) ? ram = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] : 0,
+
+
+get_beat = function(seq_length) {
+	return beat & seq_length;
+},
+if_beat = function(seq_length, beat_pos) {
+	return (beat % seq_length == beat_pos && t % tempo == 0);
+},
+if_euclid = function(beat_length) {
+	return (t % (tempo * beat_length) == 0);
+},
+
+note_hertz = function(steps_from_a) {
+	return 420.69 * Math.pow(1.059463, steps_from_a);
+},
+
+decay_exponential = function(start, length, curve) {   
+	if (start + length < t) return 0;
+	e_pos = (length - (t - start)) / length;
+	return Math.pow(e_pos, curve);
+},
+
+lopass = function(s, cut, addr) {
+	s_p = ram[addr];
+	s = (s > s_p) ?
+		// waveform up
+		((s - s_p > cut) ? s_p + cut : s) :
+		// waveform down
+		((s_p - s > cut) ? s_p - cut : s);
+	ram[addr] = s;
+	return s;
+},
+
+
+fm = function(freq, mod) {
+	// car_frequency is in hertz
+	// mod_sine is -1 .. 1
+	duty_length = sample_rate / freq;
+	return Math.sin(Math.PI * (t / duty_length + mod));
+},
+
+// run sample against decay envelope
+fm1 = function(p, i, len) {
+	// p = pitch
+	// i = ram position
+	// len = number of seconds for decay
+	s = fm(p * 7, 0) * decay_exponential(ram[i], sample_rate * len, 10);
+	s = fm(p * 3, s) * decay_exponential(ram[i], sample_rate * len, 100);
+	s = fm(p * 1, s) * decay_exponential(ram[i], sample_rate * len, 10);
+	//s = sine_wave(fm(p * 4, s, 0.1)) * decay_exponential(ram[i], 800, 20);
+	//s = sine_wave(fm(p / 2, s, 0.1)) * decay_exponential(ram[i], 81800, 2);
+	//s = sine_wave(fm(p / 8, s, 1)) * decay_exponential(ram[i], 51800, 100);
+	return s;
+},
+
+noise_wave = function() {
+	return (Math.random() - 0.5);
+},
+
+square_wave = function(frequency) {
+	duty_length = sample_rate / frequency;
+	duty_on = (t % duty_length > duty_length / 2) ? 0 : 1;
+	return duty_on - 0.5;
+},
+
+triangle_wave = function(frequency) {
+	duty_length = sample_rate / frequency;
+	pos = (t % duty_length) / duty_length;
+	return (((pos <= 0.5) ? pos * 2 : (1 - pos) * 2) - 0.5);
+},
+
+
+
+fm_len = ((t >> 12) % 64) / 64,
+//s += (fm1(p0, 0, 0.2) + fm1(p1, 1, 0.2) + fm1(p2, 2, 0.2) + fm1(p3, 3, 0.2)) * 0.30,
+
+if_beat(1, 0) ? ram[0]++ : 0,
+
+beat1 = function() {
+	// kick
+	if (if_beat(8, 0) || if_euclid(14) || if_euclid(7)) ram[4] = t;
+},
+beat2 = function() {
+	if_beat(8, 4) ? ram[5] = t : 0;
+	(if_euclid(7) || if_euclid(1)) && Math.random() > 0.67 ? ram[7] = t : 0;
+},
+
+dobeats = function(pos) {
+	if ((pos % 1) == 0) {
+		beat1();
+	}
+	if ((pos % 1) == 1) {
+		beat2();
+	}
+},
+dobeats(ram[0]),
+
+// kick
+ke = 5000,
+kw = triangle_wave(50 + decay_exponential(ram[4], ke, 800) / 1000),
+kw *= decay_exponential(ram[4], ke, 2) * 5,
+s += kw,
+
+// snare
+sw = lopass((triangle_wave(333) * 0.7 + noise_wave()), 33, 6),
+sn1 = sw * decay_exponential(ram[5], 2500, 5) * 4,
+sn2 = sw * decay_exponential(ram[7], 1200, 4) * 2,
+s += sn1 + sn2,
+
+// hat
+cf = 1799,
+mf = 3293,
+m2f = 8659,
+hw = square_wave(cf) * square_wave(mf) * square_wave(m2f),
+if_beat(8, 2) || if_euclid(5) || if_euclid(7) ? ram[8] = t : 0,
+s += hw * decay_exponential(ram[8], 25000, 25) * (if_beat(2, 0)* 3 + 2),
+
+// clamp that shit
+//s *= 10,
+s = Math.min(1, s),
+s = Math.max(-1, s),
+
+// output
+s * vol + 127
